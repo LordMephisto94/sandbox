@@ -1,0 +1,35 @@
+#!/bin/sh
+BASE=/usr/libexec/motion-white
+LOCK=/tmp/motion-white.supervisor
+running() {
+    [ -r "$LOCK/pid" ] || return 1
+    read -r pid < "$LOCK/pid"
+    case "$pid" in ''|*[!0-9]*) return 1;; esac
+    [ -r "/proc/$pid/cmdline" ] || return 1
+    tr '\000' '\n' < "/proc/$pid/cmdline" | grep -qx "$BASE/supervisor.sh"
+}
+case "${1:-}" in
+    start)
+        running && exit 0
+        if [ -d "$LOCK" ]; then
+            rm -f "$LOCK/pid" "$LOCK/last-run.log"
+            rmdir "$LOCK" || exit 1
+        fi
+        sh "$BASE/supervisor.sh" </dev/null >/dev/null 2>&1 &
+        ;;
+    stop)
+        if running; then
+            kill -TERM "$pid" || exit 1
+            n=0
+            while running; do
+                n=$((n+1)); [ "$n" -le 30 ] || { echo 'Controller has not stopped' >&2; exit 1; }
+                sleep 1
+            done
+        else
+            sh "$BASE/recover.sh" || exit 1
+        fi
+        ;;
+    restart) "$0" stop && "$0" start;;
+    status) if running; then echo "motion-white supervisor PID $pid"; else echo 'motion-white stopped'; exit 1; fi;;
+    *) echo "Usage: $0 start|stop|restart|status" >&2; exit 2;;
+esac

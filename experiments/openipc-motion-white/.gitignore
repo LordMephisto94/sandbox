@@ -1,0 +1,13 @@
+/build/
+__pycache__/
+*.pyc
+*.arm
+*.ko
+*.so
+*.o
+*.a
+*.bin
+*.tar
+*.tar.gz
+*.tgz
+*.log
