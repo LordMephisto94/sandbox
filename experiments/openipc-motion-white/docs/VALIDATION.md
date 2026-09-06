@@ -55,3 +55,16 @@ bytes, rootfs 5,206,016 bytes (36 KiB spare). The packaged squashfs contains the
 new readiness check. Its SHA-256 is
 `a65de067282af0e54e0ddfd49e8950c5dd81228f08534a740da659b69737db45`.
 It replaces the earlier archive at the output path above.
+
+### Waiting for night mode to settle
+
+The next boot log showed valid metrics at 16:04:43, but `night=0` while
+`sensor15=1`. By the 16:04:59 retry, both indicated night. Startup now requires
+the configured sensor polarity and Majestic's night state to agree across two
+consecutive checks. A missing, invalid or disagreeing reading resets that wait.
+The controller keeps its own final state check in case the light changes between
+the readiness check and startup. This revision still needs a camera reboot test.
+
+The stable-state revision also builds within the same partition sizes. Its
+packaged supervisor includes the state-agreement check; archive SHA-256:
+`b5cc11a4115bf9ee05eb1ee04368dfbb39d31f98ec40818aa3be0c293fc64890`. This is now the latest build at the output path above.

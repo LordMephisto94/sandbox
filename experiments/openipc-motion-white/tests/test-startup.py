@@ -18,14 +18,14 @@ def wait_for(predicate):
     raise AssertionError('Timed out')
 
 
-for cancel in (False, True):
+for cancel, night_value in ((False, 1), (False, 0), (True, 1)):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         base = root / 'lib'
         base.mkdir()
         bindir = root / 'bin'
         bindir.mkdir()
-        (root / 'conf').write_text('ENABLED=true\n')
+        (root / 'conf').write_text(f'ENABLED=true\nNIGHT_SENSOR_VALUE={night_value}\n')
         script = source.read_text()
         for old, new in [('/usr/libexec/motion-white', base),
                          ('/tmp/motion-white.supervisor', root / 'lock'),
@@ -42,7 +42,7 @@ while :; do sleep 1 & wait $!; done
 ''')
         for name, body in {
             'logger': 'echo "$*" >> "$TEST_ROOT/log"',
-            'curl': 'touch "$TEST_ROOT/polled"; cat "$TEST_ROOT/metrics"',
+            'curl': 'cat "$TEST_ROOT/metrics" | tee -a "$TEST_ROOT/polled"',
         }.items():
             p = bindir / name
             p.write_text('#!/bin/sh\n' + body + '\n')
@@ -55,11 +55,26 @@ while :; do sleep 1 & wait $!; done
             wait_for(lambda: (root / 'log').exists())
             assert not (root / 'started').exists()
             if not cancel:
-                (root / 'sensor').write_text('1\n')
+                (root / 'sensor').write_text(f'{night_value}\n')
                 (root / 'metrics').write_text('night_enabled 1\nmd_rects_acc_total invalid\n')
                 wait_for(lambda: (root / 'polled').exists())
                 assert not (root / 'started').exists()
-                (root / 'metrics').write_text('night_enabled 1\nmd_rects_acc_total 0\n')
+                # Reproduce the camera: readable metrics, but Majestic is still in day mode.
+                (root / 'metrics').write_text('night_enabled 0\nmd_rects_acc_total 10\n')
+                wait_for(lambda: 'md_rects_acc_total 10' in (root / 'polled').read_text())
+                assert not (root / 'started').exists()
+                # One agreeing check must not start the controller.
+                (root / 'metrics').write_text('night_enabled 1\nmd_rects_acc_total 11\n')
+                wait_for(lambda: 'md_rects_acc_total 11' in (root / 'polled').read_text())
+                time.sleep(.2)
+                assert not (root / 'started').exists()
+                # A mismatch between agreeing checks resets the stability requirement.
+                (root / 'metrics').write_text('night_enabled 0\nmd_rects_acc_total 12\n')
+                wait_for(lambda: 'md_rects_acc_total 12' in (root / 'polled').read_text())
+                (root / 'metrics').write_text('night_enabled 1\nmd_rects_acc_total 13\n')
+                wait_for(lambda: 'md_rects_acc_total 13' in (root / 'polled').read_text())
+                time.sleep(.2)
+                assert not (root / 'started').exists()
                 wait_for(lambda: (root / 'started').exists())
             proc.terminate()
             proc.wait(timeout=4)
@@ -69,4 +84,4 @@ while :; do sleep 1 & wait $!; done
             if proc.poll() is None:
                 proc.kill()
                 proc.wait()
-print('Startup waits for GPIO and valid metrics; TERM stops a waiting supervisor')
+print('Startup waits for valid, agreeing states twice; mismatch resets stability; TERM stops waiting')
