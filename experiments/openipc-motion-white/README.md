@@ -104,7 +104,12 @@ sh /usr/libexec/motion-white/service.sh --dry-run
 
 ## Lifecycle and limitations
 
-The service starts after Majestic. It journals and syncs the original automatic
+The service waits for valid motion/night metrics and GPIO15 before starting the
+controller. It checks every two seconds, so a slow boot does not need a fixed
+delay. A waiting message is logged initially and every 30 unsuccessful checks.
+Once running, telemetry failures still stop the controller and trigger recovery.
+
+It journals and syncs the original automatic
 light-monitor state before disabling it; cleanup, restart or reboot restores
 that state. Failed recovery keeps the journal. The PWM worker independently
 turns white off after four seconds without heartbeats. Configuration is not

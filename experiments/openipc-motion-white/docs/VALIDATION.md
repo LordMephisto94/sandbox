@@ -1,6 +1,6 @@
 # Build and test results — 2026-09-06
 
-Artifact: `output/images/openipc.hiseeu-g5clq-motion-white.tgz`
+Original camera-tested build: `output/images/openipc.hiseeu-g5clq-motion-white.tgz`
 
 SHA-256: `dfd002371dbbfcca7e50dcd64c1bce0766508f30cf2f9be3d9d3f5b340891700`
 
@@ -31,8 +31,8 @@ Audio configuration is unchanged.
 
 ## Repository cleanup
 
-The C helper and runtime files in `files/` are unchanged from the firmware I
-tested. The build wrapper now takes a firmware-checkout path so it can run from
+At the publication cleanup, the C helper and runtime files in `files/` were
+unchanged from the firmware I tested. The build wrapper now takes a firmware-checkout path so it can run from
 this repository. The cleanup also added the Makefile, CI and documentation.
 
 `STRICT=1 make check` passed using the firmware's ARM BusyBox ash through QEMU.
@@ -40,3 +40,18 @@ The post-build hook was also checked in a separate target directory with the
 original toolchain and the usual comment-stripped S99rc.local input. The helper,
 runtime scripts, configuration and both init scripts matched the tested image
 byte-for-byte.
+
+## Boot readiness fix
+
+My boot log showed the controller starting before metrics and GPIO15 were ready,
+then succeeding on its 15-second retry. The supervisor now waits for those
+inputs before launching the controller. Tests cover missing GPIO, malformed
+metrics, successful startup once ready and stopping while waiting. This change
+still needs a reboot check on the camera; the earlier image's hardware result
+does not cover it.
+
+The rebuilt readiness-fix image fits the same partition sizes: kernel 1,824,240
+bytes, rootfs 5,206,016 bytes (36 KiB spare). The packaged squashfs contains the
+new readiness check. Its SHA-256 is
+`a65de067282af0e54e0ddfd49e8950c5dd81228f08534a740da659b69737db45`.
+It replaces the earlier archive at the output path above.

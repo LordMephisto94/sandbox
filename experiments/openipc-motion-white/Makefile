@@ -22,6 +22,7 @@ check: $(BUILD_DIR)/white-led-mock
 	python3 tests/test-service.py
 	python3 tests/test-recovery.py
 	python3 tests/test-supervisor.py
+	python3 tests/test-startup.py
 	python3 tests/test-layout.py
 
 clean:

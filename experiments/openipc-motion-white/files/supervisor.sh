@@ -5,6 +5,25 @@ LOCK=/tmp/motion-white.supervisor
 mkdir "$LOCK" 2>/dev/null || exit 1
 printf '%s\n' "$$" > "$LOCK/pid"
 child=
+ready() {
+    sensor=$(cat /sys/class/gpio/gpio15/value 2>/dev/null) || return 1
+    case "$sensor" in 0|1) ;; *) return 1;; esac
+    data=$(curl --fail --silent --max-time 2 http://127.0.0.1/metrics) || return 1
+    printf '%s\n' "$data" | awk '
+        $1=="md_rects_acc_total" {c=$2}
+        $1=="night_enabled" {n=$2}
+        END {exit !(c~/^[0-9]+$/ && n~/^[01]$/)}'
+}
+wait_ready() {
+    attempts=0
+    while ! ready; do
+        if [ "$attempts" = 0 ]; then
+            logger -t motion-white 'Waiting for Majestic motion/night metrics and GPIO15'
+        fi
+        attempts=$(((attempts + 1) % 30))
+        sleep 2 & child=$!; wait "$child"; child=
+    done
+}
 finish() {
     trap - EXIT TERM INT HUP
     if [ -n "$child" ]; then kill -TERM "$child" 2>/dev/null || :; wait "$child" 2>/dev/null || :; fi
@@ -33,6 +52,7 @@ while :; do
         rmdir /tmp/motion-white.run 2>/dev/null || exit 1
     fi
     if sh "$BASE/recover.sh"; then
+        wait_ready
         sh "$BASE/service.sh" --apply >/dev/null 2>&1 & child=$!
         wait "$child"; result=$?; child=
         logger -t motion-white "Controller exited ($result); retrying in 15s"
