@@ -1,12 +1,12 @@
-# Hardware and observed behaviour
+# Hardware notes
 
-## Scope
+## My cameras
 
-Owner-reported hardware: HiseeU 2 MP PTZ PoE, G5C-LQ/S38 board identification,
-Goke GK7205V200/GK7205V210 family, SmartSens SC223A, 8 MiB SPI NOR. Two cameras
-were reported as apparently identical, one stock and one OpenIPC. Board identity
-is not proven by the SoC alone; compatibility with arbitrary GK7205V210 cameras
-is not claimed.
+I have two HiseeU 2 MP PTZ PoE cameras that appear to use the same hardware:
+G5C-LQ/S38, Goke GK7205V200/GK7205V210 family, SmartSens SC223A and 8 MiB SPI NOR.
+During development I kept one on stock firmware and used the other for OpenIPC.
+I haven't confirmed compatibility with other board revisions or cameras that
+happen to use the same SoC.
 
 | Function | Interface |
 | --- | --- |
@@ -28,9 +28,9 @@ Shared clock `0x120101bc` is checked against the observed `0x282`, never written
 PWM0 must remain untouched. Register access is MMIO configuration, not patching
 vendor executable or module data memory.
 
-## Owner-supplied evidence
+## Testing
 
-The original OpenIPC snapshot included:
+My initial OpenIPC register snapshot included:
 
 ```
 0x100c0010 0x00001000
@@ -49,21 +49,17 @@ uptime=2981 counter=8867 night=1 sensor15=1 white=1 action=none
 uptime=3011 counter=8867 night=1 sensor15=1 white=0 action=restore
 ```
 
-This shows restoration 30 seconds after the last counter increase; it is a dry
-run, not proof of hardware illumination. The owner subsequently reported that
-live IR/white operation worked and that the IR settling delay prevented repeated
-activation caused by exposure changes.
+The dry run restores night mode 30 seconds after the last counter increase.
+In the live test, IR and white lighting switched correctly. Adding the IR
+settling delay stopped the exposure change from immediately triggering the
+white LEDs again.
 
-After flashing the persistent build, the owner's report was:
+I flashed the persistent build and confirmed that the lighting works and starts
+automatically after reboot. I haven't added post-reboot `dmesg`, `ipcinfo`,
+service status or video captures here yet. I'll need those for an upstream
+device PR, with any private details removed.
 
-> It all works and remains persistant after a reboot nicely done
-
-This is a direct user report from the development session, not an independently
-captured boot log. No new post-reboot `dmesg`, `ipcinfo`, service status or video
-artifact was supplied. Those must be obtained and redacted before presenting a
-complete hardware-evidence bundle for an upstream device PR.
-
-The tested image SHA-256 and build results are in [VALIDATION.md](VALIDATION.md).
-Speaker hum remained a separate unresolved issue and is outside this feature.
-No evidence is claimed for thermal endurance at high brightness, power removal
-during a journal write, or compatibility with other board revisions.
+The image checksum and build results are in [VALIDATION.md](VALIDATION.md).
+The speaker hum is still a separate unresolved issue. I haven't tested prolonged
+use at high brightness, power loss during a journal write, or other board
+revisions.

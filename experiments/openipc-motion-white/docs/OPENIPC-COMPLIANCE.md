@@ -1,24 +1,22 @@
-# OpenIPC publication review
+# OpenIPC integration notes
 
 Reviewed against the firmware checkout's `AGENTS.md`, `best_practices.md` and
 `pr_compliance_checklist.yaml` at commit
 `2a0d5ca9a55a817fa6e9f62504425756fa9553ff`, and the public
 [OpenIPC/builder device-registration requirements](https://github.com/OpenIPC/builder#requirements-for-registration-of-new-devices).
 
-## Intended destination
+## Where this belongs
 
-This change is an experiment for `LordMephisto94/sandbox`, on its own branch
-based on `main`. It does not alter the LLDP branch or add a shared firmware
-package. [OpenIPC/sandbox](https://github.com/OpenIPC/sandbox) is the project's
-repository for experiments.
+I'm keeping this in `LordMephisto94/sandbox` on a branch from `main`, separate
+from my LLDP work. [OpenIPC/sandbox](https://github.com/OpenIPC/sandbox) is the
+project's repository for experiments.
 
-It is **not an upstream-ready OpenIPC/firmware PR**. Firmware's rules explicitly
-place single-retail-camera support in OpenIPC/builder. Installing a private
-post-build hook under firmware's `contrib/` for local use did not waive that rule.
-The published wrapper now runs directly from sandbox against a supplied firmware
-checkout, avoiding an implication that the profile belongs in the shared tree.
+Support for a specific camera belongs in OpenIPC/builder. The local firmware
+hook was enough to build and test my camera, but an upstream submission needs
+proper device and package integration. The wrapper runs from this repository
+and takes the firmware checkout as an argument.
 
-## Applicable checks
+## Checks
 
 | Requirement | Result |
 | --- | --- |
@@ -33,24 +31,20 @@ checkout, avoiding an implication that the profile belongs in the shared tree.
 | Module conventions | Existing `open_pwm` is used; no insmod or new module introduced |
 | Shell compatibility | Runtime scripts tested with BusyBox ash; post-build hook retains comment stripping |
 | Flash budget | Tested kernel and squashfs fit 2 MiB / 5 MiB limits; wrapper enforces byte limits |
-| Hardware evidence | Owner reports live operation and reboot persistence; supplied traces and limits documented honestly |
+| Hardware evidence | I tested live operation and reboot persistence; logs and remaining tests are listed in HARDWARE.md |
 | Credentials and EULA | No credentials, private camera backups, setup bypass, or automatic license acceptance added |
 
-## Requirements for a later upstream builder submission
+## Still needed for OpenIPC/builder
 
-The current source-only sandbox publication must not be described as satisfying
-all firmware merge gates. An upstream device integration still needs:
+Before submitting this as a supported device, I need to:
 
-1. A device directory/profile in builder's supported layout, with per-device
-   defconfig, customizer and excludes file as required by builder.
-2. A proper package `Config.in` / `.mk` wired into that device's defconfig, with
-   reviewable upstream provenance and an immutable source version where fetched.
-   The explicit sandbox build wrapper is not a substitute for that firmware gate.
-3. A complete build and flash-size validation using that exact builder profile.
-4. Redacted post-reboot camera logs and identification accompanying the owner's
-   operation report, plus any additional evidence requested by maintainers.
+1. Add the device profile in builder's layout, including its defconfig,
+   customizer and excludes file.
+2. Add a package `Config.in` and `.mk`, selected by that device's defconfig.
+   Any downloaded source needs an upstream location and a fixed version.
+3. Build that profile and check the resulting image sizes.
+4. Include post-reboot camera identification and logs, with private details
+   removed, alongside the lighting tests.
 
-The existing local-image report cannot be relabelled as a test of a future
-builder package. Maintainer approval is not implied by this review. Publishing
-this experiment to the requested sandbox fork and upstreaming a supported device
-profile are separate steps.
+The tests here cover my current local build. The builder package will need its
+own build and camera tests once it's ready.

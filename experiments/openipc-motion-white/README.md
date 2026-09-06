@@ -4,10 +4,10 @@ At night, accepted motion switches the camera from IR illumination to colour
 with fixed-brightness white LEDs. After 30 seconds without further accepted
 motion, IR night mode returns. Boot startup and recovery are included.
 
-The owner reports successful operation and persistence after reboot on a HiseeU
-2 MP PTZ PoE camera: GK7205V200/V210 family, SC223A, 8 MiB SPI NOR. This is a
-board-specific experiment, not a universal Goke PWM utility. See
-[hardware and test evidence](docs/HARDWARE.md) for the scope of that report.
+I built this for my HiseeU 2 MP PTZ PoE camera: GK7205V200/V210 family,
+SC223A, 8 MiB SPI NOR. I've tested the motion-triggered lighting and confirmed
+that it still works after a reboot. The GPIO assignments are specific to this
+board; see my [hardware notes](docs/HARDWARE.md) before trying another camera.
 
 ## Build
 
@@ -63,8 +63,8 @@ compiler; use a separate invocation from cross-compilation.
 | `NIGHT_SENSOR_VALUE` | `1` | Logical GPIO15 value observed at night |
 
 Brightness is constant throughout each white-light event. PWM count is not a
-perceived-brightness percentage. The owner tested a one-second pulse at 110;
-that does not establish a continuous-operation thermal rating.
+perceived-brightness percentage. I tried a one-second pulse at 110 and it was
+very bright. I haven't tested it at that level for extended periods.
 
 Restart after editing the configuration:
 
@@ -83,18 +83,17 @@ Status reports the supervisor process, not successful telemetry or illumination.
 Startup failures are logged and retried. To disable, stop the service first and
 set `ENABLED=false` in its configuration.
 
-A previously configured camera should already have the required settings. On a
-fresh, claimed camera, this optional one-time command applies the known GPIO
-assignments, enables motion at sensitivity 1 and disables the image flip that
-prevented motion detection on the tested sensor pipeline:
+A previously configured camera should already have the required settings. After
+completing setup on a fresh camera, this optional one-time command applies the
+known GPIO assignments, enables motion at sensitivity 1 and disables the image
+flip that prevented motion detection on my camera:
 
 ```sh
 sh /usr/libexec/motion-white/configure.sh
 ```
 
-It does not select the sensor driver or replace initial camera setup. The normal
-OpenIPC password and Majestic EULA flow is retained. Only the human owner accepts
-the EULA.
+Set up the sensor driver separately. You'll still need to complete OpenIPC's
+normal password setup and accept the Majestic EULA yourself.
 
 For a dry run, stop the active service first:
 
@@ -127,9 +126,10 @@ camera-tested service; the binary is generated during the build, not committed.
 
 The ambient sensor is ignored while white is active to prevent feedback.
 Motion during settling intervals is also ignored, including real movement.
-This is motion detection, not person or presence detection. Daylight polarity,
-crash/power-failure recovery on hardware, and upgrade-abort recovery require
-separate verification; normal operation and reboot were reported working.
+This detects movement rather than people or continued presence. I still need to
+check daylight polarity, crash and power-failure recovery on the camera, and
+recovery after an aborted upgrade. Normal operation and reboot persistence work
+on my camera.
 
 ## Validation and publishing
 
@@ -140,10 +140,10 @@ make clean
 ```
 
 Strict mode requires BusyBox (`BUSYBOX=/path/to/busybox` can override discovery).
-The workflow runs host tests and BusyBox syntax checks. It does not claim a full
-firmware build or hardware test. See [validation](docs/VALIDATION.md),
-[OpenIPC publication scope](docs/OPENIPC-COMPLIANCE.md) and the
-[prepared PR description](PR-DRAFT.md).
+CI runs host tests and BusyBox syntax checks; firmware builds and camera tests
+are separate. See the [test results](docs/VALIDATION.md),
+[OpenIPC integration notes](docs/OPENIPC-COMPLIANCE.md) and
+[PR description](PR-DRAFT.md).
 
 License: [MIT](LICENSE), matching the sandbox repository. Only source, tests and
 documentation are included; factory blobs and generated firmware are excluded.
